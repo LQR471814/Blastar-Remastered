@@ -269,7 +269,7 @@ class NetworkController(GenericController):
                         velocityFalloff=self.falloff
                     ))
             if keystate[pygame.K_ESCAPE]:
-                self.client.send(b"\x05")  # ? Packet type 5: Quit
+                self.client.sendto(b"\x05", self.remoteAddr)  # ? Packet type 5: Quit
                 pygame.quit()
                 sys.exit()
 
@@ -286,7 +286,7 @@ class NetworkController(GenericController):
 
             for event in pygame.event.get():
                 if event.type == QUIT:
-                    self.client.send(b"\x05")  # ? Packet type 5: Quit
+                    self.client.sendto(b"\x05", self.remoteAddr)  # ? Packet type 5: Quit
                     pygame.quit()
                     sys.exit()
 

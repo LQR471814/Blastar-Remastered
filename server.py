@@ -60,9 +60,9 @@ while True:
         index += 1
         print(clients)
 
-    if b[0] == 5:
-        clients.pop(addr, None)
-
     for client in clients.keys():
         if addr != client:
             s.sendto(bytes([clients[addr]]) + b, client)
+
+    if b[0] == 5:
+        clients.pop(addr, None)
