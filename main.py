@@ -269,6 +269,7 @@ class NetworkController(GenericController):
                         velocityFalloff=self.falloff
                     ))
             if keystate[pygame.K_ESCAPE]:
+                self.client.send(b"\x05")  # ? Packet type 5: Quit
                 pygame.quit()
                 sys.exit()
 
@@ -285,6 +286,7 @@ class NetworkController(GenericController):
 
             for event in pygame.event.get():
                 if event.type == QUIT:
+                    self.client.send(b"\x05")  # ? Packet type 5: Quit
                     pygame.quit()
                     sys.exit()
 
@@ -307,7 +309,8 @@ class NetworkController(GenericController):
             b, addr = self.client.recvfrom(256)
             if b[1] == 0:  # ? Handle Player Join
                 print(b)
-                buff = b[2:] #* For some reason, even though the buffer used by all the types of packets are the same, defining that buffer outside the if statement breaks the interpretation
+                # * For some reason, even though the buffer used by all the types of packets are the same, defining that buffer outside the if statement breaks the interpretation
+                buff = b[2:]
                 if self.opponents.get(b[0]) == None:
                     self.client.sendto(
                         b"\x00" + self.player.toBytes(), self.remoteAddr)
@@ -332,6 +335,10 @@ class NetworkController(GenericController):
                 #         self.opponents[b[0]].velocityQueue.append(syncParams[1])
                 # else:
                 #     print("Encountered a diagonal!")
+            elif b[1] == 5:  # ? Handle Quit
+                opp = self.opponents.get(b[0])
+                if opp != None:
+                    self.game.kill(opp)
             else:
                 break
 
