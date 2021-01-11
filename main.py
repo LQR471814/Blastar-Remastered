@@ -269,7 +269,8 @@ class NetworkController(GenericController):
                         velocityFalloff=self.falloff
                     ))
             if keystate[pygame.K_ESCAPE]:
-                self.client.sendto(b"\x05", self.remoteAddr)  # ? Packet type 5: Quit
+                # ? Packet type 5: Quit
+                self.client.sendto(b"\x05", self.remoteAddr)
                 pygame.quit()
                 sys.exit()
 
@@ -286,7 +287,8 @@ class NetworkController(GenericController):
 
             for event in pygame.event.get():
                 if event.type == QUIT:
-                    self.client.sendto(b"\x05", self.remoteAddr)  # ? Packet type 5: Quit
+                    # ? Packet type 5: Quit
+                    self.client.sendto(b"\x05", self.remoteAddr)
                     pygame.quit()
                     sys.exit()
 
@@ -323,18 +325,18 @@ class NetworkController(GenericController):
             elif b[1] == 2:  # ? Handle Sync
                 buff = b[2:]
                 syncParams = interpretSyncBytes(buff)
-                print(syncParams)
                 distX = int(self.opponents[b[0]].pos[0]) - syncParams[0]
                 distY = int(self.opponents[b[0]].pos[1]) - syncParams[0]
-                print(distX, distY)
-                # if distY == 0:
-                #     for i in range(int(distX // syncParams[1].x)):
-                #         self.opponents[b[0]].velocityQueue.append(syncParams[1])
-                # elif distX == 0:
-                #     for i in range(int(distY // syncParams[1].y)):
-                #         self.opponents[b[0]].velocityQueue.append(syncParams[1])
-                # else:
-                #     print("Encountered a diagonal!")
+                a = 0.1  # ? De-acceleration
+                t = 10  # ? Time
+
+                sx = (distX + 1/2 * a * t**2)/t  # ? Speed X (Velocity X)
+                sy = (distY + 1/2 * a * t**2)/t  # ? Speed Y (Velocity Y)
+                print(distX, distY, sx, sy)
+
+                syncVel = Velocity(sx, sy, a, False, self.maxSpeed)
+
+                self.player.velocityQueue.append(syncVel)
             elif b[1] == 5:  # ? Handle Quit
                 opp = self.opponents.get(b[0])
                 if opp != None:
