@@ -204,7 +204,7 @@ class SpaceObject:
         # ? SpaceObject as Bytes Protocol Description:
         # ? Buffer size: 20 Bytes
         # ? [4 Bytes (int) X] | [4 Bytes (int) Y] | [4 Bytes (int) maxVelStack] | [4 Bytes (int) maxVelSpeed] | [4 Bytes (float) velocityFalloff]
-        return struct.pack("!IIIIf", self.pos[0], self.pos[1], self.maxVelocityStack, self.maxVelSpeed, self.velocityFalloff)
+        return struct.pack("!IIIIf", int(self.pos[0]), int(self.pos[1]), self.maxVelocityStack, self.maxVelSpeed, self.velocityFalloff)
 
 
 class Game:
