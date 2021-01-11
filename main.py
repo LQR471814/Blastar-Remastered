@@ -336,7 +336,7 @@ class NetworkController(GenericController):
 
                 syncVel = Velocity(sx, sy, a, False, self.maxSpeed)
 
-                self.player.velocityQueue.append(syncVel)
+                self.opponents[b[0]].velocityQueue.append(syncVel)
             elif b[1] == 5:  # ? Handle Quit
                 opp = self.opponents.get(b[0])
                 if opp != None:
