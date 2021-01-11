@@ -320,8 +320,9 @@ class NetworkController(GenericController):
             elif b[1] == 2:  # ? Handle Sync
                 buff = b[2:]
                 syncParams = interpretSyncBytes(buff)
-                distX = int(self.opponents[b[0]].pos[0]) - syncParams[0][0]
-                distY = int(self.opponents[b[0]].pos[1]) - syncParams[0][1]
+                print(syncParams)
+                distX = int(self.opponents[b[0]].pos[0]) - syncParams[0]
+                distY = int(self.opponents[b[0]].pos[1]) - syncParams[0]
                 print(distX, distY)
                 # if distY == 0:
                 #     for i in range(int(distX // syncParams[1].x)):
