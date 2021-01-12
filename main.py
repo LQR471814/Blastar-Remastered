@@ -326,7 +326,7 @@ class NetworkController(GenericController):
                 buff = b[2:]
                 syncParams = interpretSyncBytes(buff)
                 distX = int(self.opponents[b[0]].pos[0]) - syncParams[0]
-                distY = int(self.opponents[b[0]].pos[1]) - syncParams[0]
+                distY = int(self.opponents[b[0]].pos[1]) - syncParams[1]
                 a = 0.1  # ? De-acceleration
                 t = 10  # ? Time
 
@@ -334,7 +334,7 @@ class NetworkController(GenericController):
                 sy = (distY + 1/2 * a * t**2)/t  # ? Speed Y (Velocity Y)
                 print(distX, distY, sx, sy)
 
-                syncVel = Velocity(sx, sy, a, False, self.maxSpeed)
+                syncVel = Velocity(-sx, -sy, a, False, self.maxSpeed)
 
                 self.opponents[b[0]].velocityQueue.append(syncVel)
             elif b[1] == 5:  # ? Handle Quit
