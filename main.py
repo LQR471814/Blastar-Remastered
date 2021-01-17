@@ -136,7 +136,7 @@ class GenericController():
         obj.pos[1] = clamp(obj.pos[1], 0, self.scrDimensions[1])
 
     def onAllCollided(self, obj, target):
-        if obj.id not in target.id and target.id not in obj.id:
+        if obj.id.split("_")[0] not in target.id and target.id.split("_")[0] not in obj.id:
             self.game.kill(obj, target)
 
     def limitBullet(self, obj):
@@ -166,9 +166,8 @@ class SingleplayerController(GenericController):
 # ? 0: Player Join
 # ? 1: Player Movement
 # ? 2: Velocity Sync
-# ? 3: SpaceObject Summon
-# ? 4: SpaceObject Kill
-# ? 5: Player Quit
+# ? 3: Player Shoot
+# ? 4: Player Quit
 
 class NetworkController(GenericController):
     def __init__(self):
@@ -250,11 +249,10 @@ class NetworkController(GenericController):
                         velocityFalloff=self.falloff,
                         initVelocity=Velocity(0, -6, 0, True, 6)
                     ))
+                self.client.sendto(b"\x03", self.remoteAddr)
             if keystate[pygame.K_ESCAPE]:
-                # ? Packet type 5: Quit
-                self.client.sendto(b"\x05", self.remoteAddr)
-                pygame.quit()
-                sys.exit()
+                # ? Packet type 4: Quit
+                self.quit()
 
             if abs(self.player.velocity.x) < self.syncThresh and abs(self.player.velocity.y) < self.syncThresh and self.synced != True:  # ? Packet type 2: Sync
                 self.client.sendto(
@@ -273,9 +271,7 @@ class NetworkController(GenericController):
             for event in pygame.event.get():
                 if event.type == QUIT:
                     # ? Packet type 5: Quit
-                    self.client.sendto(b"\x05", self.remoteAddr)
-                    pygame.quit()
-                    sys.exit()
+                    self.quit()
 
             pygame.display.update()
             self.screen.fill(WHITE)
@@ -291,7 +287,7 @@ class NetworkController(GenericController):
                     self.client.sendto(
                         b"\x00" + self.player.toBytes(), self.remoteAddr)
                     self.opponents[b[0]] = spaceObjectFromBytes(
-                        buff, self.screen, self.opponentSprite, self.opponentDead, self.limitPlayers, self.onAllCollided, f"Player_{b[0]}")
+                        buff, self.screen, self.opponentSprite, self.opponentDead, self.limitPlayers, self.onAllCollided, f"Enemy_{b[0]}")
                     self.game.summon(self.opponents[b[0]])
             elif b[1] == 1:  # ? Handle Velocity
                 buff = b[2]
@@ -320,7 +316,20 @@ class NetworkController(GenericController):
 
                 self.opponents[b[0]].velocity.x = sx
                 self.opponents[b[0]].velocity.y = sy
-            elif b[1] == 5:  # ? Handle Quit
+            elif b[1] == 3: # ? Handle shoot
+                self.game.summon(SpaceObject(
+                    pos=self.opponents[b[0]].pos,
+                    scr=self.screen,
+                    sprite=pygame.image.load("enemy_bullet.png"),
+                    dead=pygame.Surface((0, 0)),
+                    maxVelSpeed=6,
+                    onWallCollided=self.limitBullet,
+                    onCollision=self.onAllCollided,
+                    givenID="Enemy_Bullet",
+                    velocityFalloff=self.falloff,
+                    initVelocity=Velocity(0, -6, 0, True, 6)
+                ))
+            elif b[1] == 4:  # ? Handle Quit
                 opp = self.opponents.get(b[0])
                 if opp != None:
                     self.game.kill(opp)
@@ -329,7 +338,9 @@ class NetworkController(GenericController):
 
     # ? Packet type 4: Player Quit
     def quit(self):
-        self.client.sendto(b"\x05")
+        self.client.sendto(b"\x04", self.remoteAddr)
+        pygame.quit()
+        sys.exit()
 
 
 if __name__ == "__main__":

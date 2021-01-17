@@ -64,5 +64,5 @@ while True:
         if addr != client:
             s.sendto(bytes([clients[addr]]) + b, client)
 
-    if b[0] == 5:
+    if b[0] == 4:
         clients.pop(addr, None)
