@@ -39,7 +39,7 @@ class GenericController():
 
         self.deathFrames = round(self.targetFPS * 0.5, 0)
         self.speed = 0.2
-        self.maxSpeed = 5
+        self.maxSpeed = 999
         self.falloff = 0.1
 
         # ? Init
@@ -268,6 +268,18 @@ class NetworkController(GenericController):
                         givenID="Player_Bullet",
                         velocityFalloff=self.falloff
                     ))
+            if keystate[pygame.K_0]: #? DEBUG
+                if self.game.frame % round(self.targetFPS * 0.15, 0) == 0:
+                    sx = ((10 - self.player.pos[0]) + 1/2 * self.falloff * 10**2)/10  # ? Speed X (Velocity X)
+                    sy = ((10 - self.player.pos[1]) + 1/2 * self.falloff * 10**2)/10  # ? Speed Y (Velocity Y)
+                    print((10 - self.player.pos[0]), (10 - self.player.pos[1]))
+                    print(sx, sy)
+                    self.player.velocityQueue.append(Velocity(sx, sy, self.falloff, False, 99999))
+            if keystate[pygame.K_1]: #? DEBUG
+                if self.game.frame % round(self.targetFPS * 0.15, 0) == 0:
+                    print("-------------------")
+                    print(self.player.pos)
+                    self.player.velocityQueue.append(Velocity(1, 0, self.falloff, False, 99999))
             if keystate[pygame.K_ESCAPE]:
                 # ? Packet type 5: Quit
                 self.client.sendto(b"\x05", self.remoteAddr)
@@ -302,6 +314,7 @@ class NetworkController(GenericController):
     # ? Packet type 2: Sync
     def onVelocityFinishCallback(self, vel: Velocity, obj: SpaceObject):
         if len(obj.velocityQueue) == 0:
+            print(obj.pos)
             self.client.sendto(
                 b"\x02" + constructSyncBytes(obj.pos, vel), self.remoteAddr
             )
@@ -325,8 +338,8 @@ class NetworkController(GenericController):
             elif b[1] == 2:  # ? Handle Sync
                 buff = b[2:]
                 syncParams = interpretSyncBytes(buff)
-                distX = int(self.opponents[b[0]].pos[0]) - syncParams[0]
-                distY = int(self.opponents[b[0]].pos[1]) - syncParams[1]
+                distX = syncParams[0] - int(self.opponents[b[0]].pos[0])
+                distY = syncParams[1] - int(self.opponents[b[0]].pos[1])
                 a = 0.1  # ? De-acceleration
                 t = 10  # ? Time
 
@@ -334,7 +347,7 @@ class NetworkController(GenericController):
                 sy = (distY + 1/2 * a * t**2)/t  # ? Speed Y (Velocity Y)
                 print(distX, distY, sx, sy)
 
-                syncVel = Velocity(-sx, -sy, a, False, self.maxSpeed)
+                syncVel = Velocity(sx, sy, a, False, self.maxSpeed)
 
                 self.opponents[b[0]].velocityQueue.append(syncVel)
             elif b[1] == 5:  # ? Handle Quit

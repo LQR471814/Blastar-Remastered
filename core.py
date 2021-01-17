@@ -1,3 +1,7 @@
+# Comments Key:
+# ? = actually useful information
+# * Usually the developer complaining but sometimes there's important info here too
+
 import struct
 import types
 from typing import *
@@ -50,7 +54,7 @@ class Velocity:
             return self.applyLogic(pos)
 
         if self.finished == False:
-            if int(self.x) == 0 and int(self.y) == 0:
+            if self.x == 0 and self.y == 0:
                 self.finished = True
             else:
                 return self.applyLogic(pos)
@@ -141,6 +145,8 @@ class SpaceObject:
         self.pos = pos
         self.velocityFalloff = velocityFalloff
         self.maxVelSpeed = maxVelSpeed
+        # * I'm not sure what kind of drunk, last minute reason I came up to introduce a "central" velocity all the "temporary" velocities in velocityQueue would apply to but it's implemented haphazardly and I can't remove it otherwise sacrificing the smooooooth movement of the player.
+        # * Oh wait I figured it out, if I remove this each individual velocity added would have very jaggering movement because it's directly influencing the position until it's finished (which means the ship would slow down and then speed up all of a sudden when the velocity is finished and it's moving onto the next) this "central" velocity ensures that there is smooth movement since it never finishes
         self.velocity = Velocity(0, 0, velocityFalloff, True, maxVelSpeed)
         self.maxVelocityStack = maxVelStack
         self.velocityQueue = velocityQueue
