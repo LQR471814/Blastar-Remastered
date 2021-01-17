@@ -249,7 +249,7 @@ class NetworkController(GenericController):
                         velocityFalloff=self.falloff,
                         initVelocity=Velocity(0, -6, 0, True, 6)
                     ))
-                self.client.sendto(b"\x03", self.remoteAddr)
+                    self.client.sendto(b"\x03", self.remoteAddr)
             if keystate[pygame.K_ESCAPE]:
                 # ? Packet type 4: Quit
                 self.quit()
