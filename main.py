@@ -282,10 +282,6 @@ class NetworkController(GenericController):
             pygame.display.update()
             self.screen.fill(WHITE)
 
-    # ? Packet type 1: Velocity
-    def addForceNetworkCallback(self, vel: Velocity):
-        self.client.sendto(b"\x01" + vel.toBytes(), self.remoteAddr)
-
     # ? Packet type 2: Sync
     def onVelocityFinishCallback(self, vel: Velocity, obj: SpaceObject):
         if len(obj.velocityQueue) == 0:
@@ -309,17 +305,17 @@ class NetworkController(GenericController):
                     self.game.summon(self.opponents[b[0]])
             elif b[1] == 1:  # ? Handle Velocity
                 buff = b[2]
-                if buff == b"\x00":
-                    self.player.velocity.x = -self.speed * \
+                if buff == 0:
+                    self.opponents[b[0]].velocity.x = -self.speed * \
                         (self.gameSpeedFactor / self.fps)
-                elif buff == b"\x01":
-                    self.player.velocity.x = self.speed * \
+                elif buff == 1:
+                    self.opponents[b[0]].velocity.x = self.speed * \
                         (self.gameSpeedFactor / self.fps)
-                elif buff == b"\x02":
-                    self.player.velocity.y = -self.speed * \
+                elif buff == 2:
+                    self.opponents[b[0]].velocity.y = -self.speed * \
                         (self.gameSpeedFactor / self.fps)
-                elif buff == b"\x03":
-                    self.player.velocity.y = self.speed * \
+                elif buff == 3:
+                    self.opponents[b[0]].velocity.y = self.speed * \
                         (self.gameSpeedFactor / self.fps)
             elif b[1] == 2:  # ? Handle Sync
                 buff = b[2:]
