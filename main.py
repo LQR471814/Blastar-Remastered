@@ -54,8 +54,6 @@ class GenericController():
             scr=self.screen,
             sprite=pygame.image.load("player.png"),
             dead=pygame.image.load("player_death.png"),
-            velocityQueue=[],
-            maxVelStack=1,
             maxVelSpeed=self.maxSpeed,
             onWallCollided=self.limitPlayers,
             onCollision=self.onAllCollided,
@@ -105,24 +103,20 @@ class GenericController():
                         scr=self.screen,
                         sprite=pygame.image.load("player_bullet.png"),
                         dead=pygame.Surface((0, 0)),
-                        velocityQueue=[
-                            Velocity(0, -1 * (self.gameSpeedFactor / self.fps), 0, False, 6)],
-                        maxVelStack=2,
                         maxVelSpeed=6,
                         onWallCollided=self.limitBullet,
                         onCollision=self.onAllCollided,
                         givenID="Player_Bullet",
-                        velocityFalloff=self.falloff
+                        velocityFalloff=self.falloff,
+                        initVelocity=Velocity(0, -6, 0, True, 6)
                     ))
             if keystate[pygame.K_ESCAPE]:
                 pygame.quit()
                 sys.exit()
 
-            for vel, i in zip(self.player.velocityQueue, range(len(self.player.velocityQueue))):
-                img = font.render(str(vel), True, BLACK)
-                self.screen.blit(
-                    img, (5, h-fontsize*len(self.player.velocityQueue) + fontsize*i)
-                )
+            # ? Some text overlays
+            img = font.render(str(self.player.velocity), True, BLACK)
+            self.screen.blit(img, (5, h))
 
             img = font.render(str(int(self.fps)), True, BLACK)
             self.screen.blit(img, (5, 0))
@@ -159,8 +153,6 @@ class SingleplayerController(GenericController):
             scr=self.screen,
             sprite=pygame.image.load("enemy.png"),
             dead=pygame.image.load("enemy_death.png"),
-            velocityQueue=[],
-            maxVelStack=1,
             maxVelSpeed=self.maxSpeed,
             onWallCollided=self.limitPlayers,
             onCollision=self.onAllCollided,
@@ -183,8 +175,6 @@ class NetworkController(GenericController):
         super().__init__()
 
     def run(self, addr: str, port: int):
-        self.player.onVelocityFinish = self.onVelocityFinishCallback
-
         self.remoteAddr = (addr, port)
 
         self.opponents = {}
@@ -246,14 +236,12 @@ class NetworkController(GenericController):
                         scr=self.screen,
                         sprite=pygame.image.load("player_bullet.png"),
                         dead=pygame.Surface((0, 0)),
-                        velocityQueue=[
-                            Velocity(0, -2 * (self.gameSpeedFactor / self.fps), 0, False, 6)],
-                        maxVelStack=2,
-                        maxVelSpeed=4,
+                        maxVelSpeed=6,
                         onWallCollided=self.limitBullet,
                         onCollision=self.onAllCollided,
                         givenID="Player_Bullet",
-                        velocityFalloff=self.falloff
+                        velocityFalloff=self.falloff,
+                        initVelocity=Velocity(0, -6, 0, True, 6)
                     ))
             if keystate[pygame.K_ESCAPE]:
                 # ? Packet type 5: Quit
@@ -261,11 +249,15 @@ class NetworkController(GenericController):
                 pygame.quit()
                 sys.exit()
 
-            for vel, i in zip(self.player.velocityQueue, range(len(self.player.velocityQueue))):
-                img = font.render(str(vel), True, BLACK)
-                self.screen.blit(
-                    img, (5, h-fontsize*len(self.player.velocityQueue) + fontsize*i)
+            if (self.player.velocity.x != 0 and self.player.velocity.y != 0) and self.game.frame % round(self.targetFPS * 0.15, 0) == 0:  # ? Packet type 2: Sync
+                self.client.sendto(
+                    b"\x02" +
+                    constructSyncBytes(self.player.pos), self.remoteAddr
                 )
+
+            # ? Some text overlays
+            img = font.render(str(self.player.velocity), True, BLACK)
+            self.screen.blit(img, (5, h))
 
             img = font.render(str(int(self.fps)), True, BLACK)
             self.screen.blit(img, (5, 0))
@@ -281,14 +273,6 @@ class NetworkController(GenericController):
 
             pygame.display.update()
             self.screen.fill(WHITE)
-
-    # ? Packet type 2: Sync
-    def onVelocityFinishCallback(self, vel: Velocity, obj: SpaceObject):
-        if len(obj.velocityQueue) == 0:
-            print(obj.pos)
-            self.client.sendto(
-                b"\x02" + constructSyncBytes(obj.pos, vel), self.remoteAddr
-            )
 
     def packetHandler(self):
         while True:
@@ -329,9 +313,8 @@ class NetworkController(GenericController):
                 sy = (distY + 1/2 * a * t**2)/t  # ? Speed Y (Velocity Y)
                 print(distX, distY, sx, sy)
 
-                syncVel = Velocity(sx, sy, a, False, self.maxSpeed)
-
-                self.opponents[b[0]].velocityQueue.append(syncVel)
+                self.opponents[b[0]].velocity.x = sx
+                self.opponents[b[0]].velocity.y = sy
             elif b[1] == 5:  # ? Handle Quit
                 opp = self.opponents.get(b[0])
                 if opp != None:

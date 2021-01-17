@@ -128,22 +128,23 @@ class Velocity:
 
 
 class SpaceObject:
-    def __init__(self, pos: List[int], scr: pygame.display, sprite: pygame.Surface, dead: pygame.Surface, velocityQueue: List[Velocity], maxVelStack: int, maxVelSpeed: int, onWallCollided, onCollision, givenID: str, velocityFalloff: float, onVelocityFinish=lambda vel, obj: None):
+    def __init__(self, pos: List[int], scr: pygame.display, sprite: pygame.Surface, dead: pygame.Surface, maxVelSpeed: int, onWallCollided, onCollision, givenID: str, velocityFalloff: float, initVelocity=None):
         self.id = givenID
         self.isDead = False
 
         self.onWallCollided = onWallCollided
         self.onCollision = onCollision
-        self.onVelocityFinish = onVelocityFinish
 
         self.pos = pos
         self.velocityFalloff = velocityFalloff
         self.maxVelSpeed = maxVelSpeed
         # * I'm not sure what kind of drunk, last minute reason I came up to introduce a "central" velocity all the "temporary" velocities in velocityQueue would apply to but it's implemented haphazardly and I can't remove it otherwise sacrificing the smooooooth movement of the player.
         # * Oh wait I figured it out, if I remove this each individual velocity added would have very jaggering movement because it's directly influencing the position until it's finished (which means the ship would slow down and then speed up all of a sudden when the velocity is finished and it's moving onto the next) this "central" velocity ensures that there is smooth movement since it never finishes
-        self.velocity = Velocity(0, 0, velocityFalloff, True, maxVelSpeed)
-        self.maxVelocityStack = maxVelStack
-        self.velocityQueue = velocityQueue
+        # * Note this no longer applies since I removed the whole velocityQueue system after drawing a few graphs in Geometry class
+        if initVelocity:
+            self.velocity = initVelocity
+        else:
+            self.velocity = Velocity(0, 0, velocityFalloff, True, maxVelSpeed)
 
         self.screen = scr
 
@@ -164,24 +165,11 @@ class SpaceObject:
         # * I want cleanly in one line and that's really all I care about
         self.tick = types.MethodType(self.deathTick, self)
 
-    def addForce(self, vel: Velocity, callback=lambda vel: None):
-        if len(self.velocityQueue) != self.maxVelocityStack:
-            self.velocityQueue.append(vel)
-            callback(vel)
-
     def deathTick(self, s1, objs):  # ? Empty tick function, only renders dead sprite to screen
         # ? These two other arguments aren't used although I'm assuming s1 refers to 'self' and 'objs' refers to the attribute children of the game instance
         self.screen.blit(self.active, self.pos)
 
     def tick(self, objs):
-        if len(self.velocityQueue) != 0:
-            self.velocity.fromTuple(
-                self.velocityQueue[0].apply(self.velocity.asTuple()))
-            if self.velocityQueue[0].finished == True:
-                vel = self.velocityQueue[0]
-                self.velocityQueue.pop(0)
-                self.onVelocityFinish(vel, self)
-
         self.pos = list(self.velocity.apply(self.pos))
 
         self.onWallCollided(self)
@@ -203,8 +191,8 @@ class SpaceObject:
     def toBytes(self):
         # ? SpaceObject as Bytes Protocol Description:
         # ? Buffer size: 20 Bytes
-        # ? [4 Bytes (int) X] | [4 Bytes (int) Y] | [4 Bytes (int) maxVelStack] | [4 Bytes (int) maxVelSpeed] | [4 Bytes (float) velocityFalloff]
-        return struct.pack("!IIIIf", int(self.pos[0]), int(self.pos[1]), self.maxVelocityStack, self.maxVelSpeed, self.velocityFalloff)
+        # ? [4 Bytes (int) X] | [4 Bytes (int) Y] | [4 Bytes (int) maxVelSpeed] | [4 Bytes (float) velocityFalloff]
+        return struct.pack("!IIIf", int(self.pos[0]), int(self.pos[1]), self.maxVelSpeed, self.velocityFalloff)
 
 
 class Game:
@@ -243,22 +231,21 @@ def clamp(n, least, most):
 
 
 def spaceObjectFromBytes(b: bytes, scr: pygame.display, sprite: pygame.Surface, dead: pygame.Surface, onWallCollided, onCollision, givenID: str) -> SpaceObject:
-    spaceObjectParams = struct.unpack("!IIIIf", b)
+    spaceObjectParams = struct.unpack("!IIIf", b)
     return SpaceObject(
         [
             spaceObjectParams[0],
             spaceObjectParams[1]
         ],
-        scr, sprite, dead, [],
+        scr, sprite, dead,
         spaceObjectParams[2],
-        spaceObjectParams[3],
         onWallCollided,
         onCollision,
-        givenID, spaceObjectParams[4]
+        givenID, spaceObjectParams[3]
     )
 
 
-def constructSyncBytes(pos: Union[Tuple[int, int], List[int]], vel: Velocity):
+def constructSyncBytes(pos: Union[Tuple[int, int], List[int]]):
     # ? Velocity Sync Protocol Description:
     # ? Buffer Size: 25 Bytes
     # ? [4 Bytes (int) X] | [4 Bytes (int) Y]
