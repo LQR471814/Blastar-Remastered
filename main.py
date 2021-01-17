@@ -38,8 +38,8 @@ class GenericController():
         self.gameSpeedFactor = 1000
 
         self.deathFrames = round(self.targetFPS * 0.5, 0)
-        self.speed = 0.2
-        self.maxSpeed = 999
+        self.speed = 0.6
+        self.maxSpeed = 5
         self.falloff = 0.1
 
         # ? Init
@@ -79,32 +79,24 @@ class GenericController():
         while True:
             self.clock.tick(self.targetFPS)
 
-            fps = self.clock.get_fps()
-            if fps == 0:
-                fps = 1
+            self.fps = self.clock.get_fps()
+            if self.fps == 0:
+                self.fps = 1
 
             keystate = pygame.key.get_pressed()
 
             if keystate[pygame.K_LEFT]:
-                self.player.addForce(
-                    Velocity(-self.speed * (self.gameSpeedFactor / fps), 0,
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed)
-                )
+                self.player.velocity.x = -self.speed * \
+                    (self.gameSpeedFactor / self.fps)
             if keystate[pygame.K_RIGHT]:
-                self.player.addForce(
-                    Velocity(self.speed * (self.gameSpeedFactor / fps), 0,
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed)
-                )
+                self.player.velocity.x = self.speed * \
+                    (self.gameSpeedFactor / self.fps)
             if keystate[pygame.K_UP]:
-                self.player.addForce(
-                    Velocity(0, -self.speed * (self.gameSpeedFactor / fps),
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed)
-                )
+                self.player.velocity.y = -self.speed * \
+                    (self.gameSpeedFactor / self.fps)
             if keystate[pygame.K_DOWN]:
-                self.player.addForce(
-                    Velocity(0, self.speed * (self.gameSpeedFactor / fps),
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed)
-                )
+                self.player.velocity.y = self.speed * \
+                    (self.gameSpeedFactor / self.fps)
             if keystate[pygame.K_SPACE]:  # ? Shoot
                 # * This is not a great solution especially for lower frame rates however it will do for now
                 if self.game.frame % round(self.targetFPS * 0.15, 0) == 0 and self.player.isDead == False:
@@ -114,9 +106,9 @@ class GenericController():
                         sprite=pygame.image.load("player_bullet.png"),
                         dead=pygame.Surface((0, 0)),
                         velocityQueue=[
-                            Velocity(0, -2 * (self.gameSpeedFactor / fps), 0, False, 6)],
+                            Velocity(0, -1 * (self.gameSpeedFactor / self.fps), 0, False, 6)],
                         maxVelStack=2,
-                        maxVelSpeed=4,
+                        maxVelSpeed=6,
                         onWallCollided=self.limitBullet,
                         onCollision=self.onAllCollided,
                         givenID="Player_Bullet",
@@ -132,7 +124,7 @@ class GenericController():
                     img, (5, h-fontsize*len(self.player.velocityQueue) + fontsize*i)
                 )
 
-            img = font.render(str(int(fps)), True, BLACK)
+            img = font.render(str(int(self.fps)), True, BLACK)
             self.screen.blit(img, (5, 0))
 
             self.game.tick()
@@ -180,7 +172,7 @@ class SingleplayerController(GenericController):
 # ? Network Protcol Packet Types:
 # ? -----------------------------------
 # ? 0: Player Join
-# ? 1: Player Velocity
+# ? 1: Player Movement
 # ? 2: Velocity Sync
 # ? 3: SpaceObject Summon
 # ? 4: SpaceObject Kill
@@ -221,36 +213,31 @@ class NetworkController(GenericController):
         while True:
             self.clock.tick(self.targetFPS)
 
-            fps = self.clock.get_fps()
-            if fps == 0:
-                fps = 1
+            self.fps = self.clock.get_fps()
+            if self.fps == 0:
+                self.fps = 1
 
             keystate = pygame.key.get_pressed()
 
-            if keystate[pygame.K_LEFT]:
-                self.player.addForce(
-                    Velocity(-self.speed * (self.gameSpeedFactor / fps), 0,
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed),
-                    self.addForceNetworkCallback
-                )
-            if keystate[pygame.K_RIGHT]:
-                self.player.addForce(
-                    Velocity(self.speed * (self.gameSpeedFactor / fps), 0,
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed),
-                    self.addForceNetworkCallback
-                )
-            if keystate[pygame.K_UP]:
-                self.player.addForce(
-                    Velocity(0, -self.speed * (self.gameSpeedFactor / fps),
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed),
-                    self.addForceNetworkCallback
-                )
-            if keystate[pygame.K_DOWN]:
-                self.player.addForce(
-                    Velocity(0, self.speed * (self.gameSpeedFactor / fps),
-                             self.falloff * (self.gameSpeedFactor / fps), False, self.maxSpeed),
-                    self.addForceNetworkCallback
-                )
+            # ? Player Movement Direction Protocol Description (Packet Type 1)
+            # ? [1 Byte (Movement Type)]
+
+            if keystate[pygame.K_LEFT]:  # ? Movement Type 0
+                self.player.velocity.x = -self.speed * \
+                    (self.gameSpeedFactor / self.fps)
+                self.client.sendto(b"\x01\x00", self.remoteAddr)
+            if keystate[pygame.K_RIGHT]:  # ? Movement Type 1
+                self.player.velocity.x = self.speed * \
+                    (self.gameSpeedFactor / self.fps)
+                self.client.sendto(b"\x01\x01", self.remoteAddr)
+            if keystate[pygame.K_UP]:  # ? Movement Type 2
+                self.player.velocity.y = -self.speed * \
+                    (self.gameSpeedFactor / self.fps)
+                self.client.sendto(b"\x01\x02", self.remoteAddr)
+            if keystate[pygame.K_DOWN]:  # ? Movement Type 3
+                self.player.velocity.y = self.speed * \
+                    (self.gameSpeedFactor / self.fps)
+                self.client.sendto(b"\x01\x03", self.remoteAddr)
             if keystate[pygame.K_SPACE]:  # ? Shoot
                 # * This is not a great solution especially for lower frame rates however it will do for now
                 if self.game.frame % round(self.targetFPS * 0.15, 0) == 0 and self.player.isDead == False:
@@ -260,7 +247,7 @@ class NetworkController(GenericController):
                         sprite=pygame.image.load("player_bullet.png"),
                         dead=pygame.Surface((0, 0)),
                         velocityQueue=[
-                            Velocity(0, -2 * (self.gameSpeedFactor / fps), 0, False, 6)],
+                            Velocity(0, -2 * (self.gameSpeedFactor / self.fps), 0, False, 6)],
                         maxVelStack=2,
                         maxVelSpeed=4,
                         onWallCollided=self.limitBullet,
@@ -268,18 +255,6 @@ class NetworkController(GenericController):
                         givenID="Player_Bullet",
                         velocityFalloff=self.falloff
                     ))
-            if keystate[pygame.K_0]: #? DEBUG
-                if self.game.frame % round(self.targetFPS * 0.15, 0) == 0:
-                    sx = ((10 - self.player.pos[0]) + 1/2 * self.falloff * 10**2)/10  # ? Speed X (Velocity X)
-                    sy = ((10 - self.player.pos[1]) + 1/2 * self.falloff * 10**2)/10  # ? Speed Y (Velocity Y)
-                    print((10 - self.player.pos[0]), (10 - self.player.pos[1]))
-                    print(sx, sy)
-                    self.player.velocityQueue.append(Velocity(sx, sy, self.falloff, False, 99999))
-            if keystate[pygame.K_1]: #? DEBUG
-                if self.game.frame % round(self.targetFPS * 0.15, 0) == 0:
-                    print("-------------------")
-                    print(self.player.pos)
-                    self.player.velocityQueue.append(Velocity(1, 0, self.falloff, False, 99999))
             if keystate[pygame.K_ESCAPE]:
                 # ? Packet type 5: Quit
                 self.client.sendto(b"\x05", self.remoteAddr)
@@ -292,7 +267,7 @@ class NetworkController(GenericController):
                     img, (5, h-fontsize*len(self.player.velocityQueue) + fontsize*i)
                 )
 
-            img = font.render(str(int(fps)), True, BLACK)
+            img = font.render(str(int(self.fps)), True, BLACK)
             self.screen.blit(img, (5, 0))
 
             self.game.tick()
@@ -333,8 +308,19 @@ class NetworkController(GenericController):
                         buff, self.screen, self.opponentSprite, self.opponentDead, self.limitPlayers, self.onAllCollided, f"Player_{b[0]}")
                     self.game.summon(self.opponents[b[0]])
             elif b[1] == 1:  # ? Handle Velocity
-                buff = b[2:]
-                self.opponents[b[0]].addForce(velocityFromBytes(buff))
+                buff = b[2]
+                if buff == b"\x00":
+                    self.player.velocity.x = -self.speed * \
+                        (self.gameSpeedFactor / self.fps)
+                elif buff == b"\x01":
+                    self.player.velocity.x = self.speed * \
+                        (self.gameSpeedFactor / self.fps)
+                elif buff == b"\x02":
+                    self.player.velocity.y = -self.speed * \
+                        (self.gameSpeedFactor / self.fps)
+                elif buff == b"\x03":
+                    self.player.velocity.y = self.speed * \
+                        (self.gameSpeedFactor / self.fps)
             elif b[1] == 2:  # ? Handle Sync
                 buff = b[2:]
                 syncParams = interpretSyncBytes(buff)
@@ -377,4 +363,4 @@ if __name__ == "__main__":
         # port = int(input(" > "))
 
         game = NetworkController()
-        game.run("192.168.1.10", 3000)
+        game.run("192.168.1.8", 3000)

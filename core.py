@@ -126,12 +126,6 @@ class Velocity:
         self.x = inp[0]
         self.y = inp[1]
 
-    def toBytes(self) -> bytes:
-        # ? Velocity as Bytes Protocol Description:
-        # ? Buffer size: 17 Bytes
-        # ? [4 Bytes (float) X] | [4 Bytes (float) Y] | [4 Bytes (float) maxSpeed] | [4 Bytes (float) falloff] | [1 Byte (Bool) persistency] |
-        return struct.pack("!ffff?", self.x, self.y, self.maxSpeed, self._falloff, self.persistent)
-
 
 class SpaceObject:
     def __init__(self, pos: List[int], scr: pygame.display, sprite: pygame.Surface, dead: pygame.Surface, velocityQueue: List[Velocity], maxVelStack: int, maxVelSpeed: int, onWallCollided, onCollision, givenID: str, velocityFalloff: float, onVelocityFinish=lambda vel, obj: None):
@@ -246,11 +240,6 @@ class Game:
 
 def clamp(n, least, most):
     return max(least, min(n, most))
-
-
-def velocityFromBytes(b: bytes) -> Velocity:
-    velocityParams = struct.unpack("!ffff?", b)
-    return Velocity(velocityParams[0], velocityParams[1], velocityParams[3], velocityParams[4],  velocityParams[2])
 
 
 def spaceObjectFromBytes(b: bytes, scr: pygame.display, sprite: pygame.Surface, dead: pygame.Surface, onWallCollided, onCollision, givenID: str) -> SpaceObject:
