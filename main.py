@@ -179,6 +179,9 @@ class NetworkController(GenericController):
 
         self.opponents = {}
 
+        self.syncThresh = 0.1
+        self.synced = True
+
         self.opponentSprite = pygame.image.load("enemy.png")
         self.opponentDead = pygame.image.load("enemy_death.png")
 
@@ -216,18 +219,22 @@ class NetworkController(GenericController):
                 self.player.velocity.x = -self.speed * \
                     (self.gameSpeedFactor / self.fps)
                 self.client.sendto(b"\x01\x00", self.remoteAddr)
+                self.synced = False
             if keystate[pygame.K_RIGHT]:  # ? Movement Type 1
                 self.player.velocity.x = self.speed * \
                     (self.gameSpeedFactor / self.fps)
                 self.client.sendto(b"\x01\x01", self.remoteAddr)
+                self.synced = False
             if keystate[pygame.K_UP]:  # ? Movement Type 2
                 self.player.velocity.y = -self.speed * \
                     (self.gameSpeedFactor / self.fps)
                 self.client.sendto(b"\x01\x02", self.remoteAddr)
+                self.synced = False
             if keystate[pygame.K_DOWN]:  # ? Movement Type 3
                 self.player.velocity.y = self.speed * \
                     (self.gameSpeedFactor / self.fps)
                 self.client.sendto(b"\x01\x03", self.remoteAddr)
+                self.synced = False
             if keystate[pygame.K_SPACE]:  # ? Shoot
                 # * This is not a great solution especially for lower frame rates however it will do for now
                 if self.game.frame % round(self.targetFPS * 0.15, 0) == 0 and self.player.isDead == False:
@@ -249,12 +256,11 @@ class NetworkController(GenericController):
                 pygame.quit()
                 sys.exit()
 
-            if (self.player.velocity.x != 0 and self.player.velocity.y != 0) and self.game.frame % round(self.targetFPS * 0.15, 0) == 0:  # ? Packet type 2: Sync
+            if abs(self.player.velocity.x) < self.syncThresh and abs(self.player.velocity.y) < self.syncThresh and self.synced != True:  # ? Packet type 2: Sync
                 self.client.sendto(
-                    b"\x02" +
-                    constructSyncBytes(self.player.pos), self.remoteAddr
-                )
-
+                    b"\x02" + constructSyncBytes(self.player.pos), self.remoteAddr)
+                if self.player.velocity.x == 0 and self.player.velocity.y == 0:
+                    self.synced = True
             # ? Some text overlays
             img = font.render(str(self.player.velocity), True, BLACK)
             self.screen.blit(img, (5, h))
@@ -311,7 +317,6 @@ class NetworkController(GenericController):
 
                 sx = (distX + 1/2 * a * t**2)/t  # ? Speed X (Velocity X)
                 sy = (distY + 1/2 * a * t**2)/t  # ? Speed Y (Velocity Y)
-                print(distX, distY, sx, sy)
 
                 self.opponents[b[0]].velocity.x = sx
                 self.opponents[b[0]].velocity.y = sy
