@@ -48,6 +48,9 @@ class GenericController():
 
         self.screen = pygame.display.set_mode(self.scrDimensions)
 
+        self.game = Game(self.screen, [], self.deathFrames)
+
+    def run(self):
         self.player = SpaceObject(
             pos=[random.randint(20, self.scrDimensions[0] - 20),
                  random.randint(20, self.scrDimensions[1] - 20)],
@@ -61,9 +64,8 @@ class GenericController():
             velocityFalloff=self.falloff
         )
 
-        self.game = Game(self.screen, [self.player], self.deathFrames)
+        self.game.summon(self.player)
 
-    def run(self):
         # ? Some text rendering stuff
         WHITE = (255, 255, 255)
         BLACK = (0, 0, 0)
@@ -173,6 +175,23 @@ class NetworkController(GenericController):
     def __init__(self):
         super().__init__()
 
+    def summonPlayer(self):
+        self.player = SpaceObject(
+            pos=[random.randint(20, self.scrDimensions[0] - 20),
+                 random.randint(20, self.scrDimensions[1] - 20)],
+            scr=self.screen,
+            sprite=pygame.image.load("player.png"),
+            dead=pygame.image.load("player_death.png"),
+            maxVelSpeed=self.maxSpeed,
+            onWallCollided=self.limitPlayers,
+            onCollision=self.onAllCollided,
+            givenID="Player",
+            velocityFalloff=self.falloff
+        )
+        self.game.summon(self.player)
+        # ? Packet Type 0: Player Join
+        self.client.sendto(b"\x00" + self.player.toBytes(), self.remoteAddr)
+
     def run(self, addr: str, port: int):
         self.remoteAddr = (addr, port)
 
@@ -186,8 +205,7 @@ class NetworkController(GenericController):
 
         self.client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        # ? Packet Type 0: Player Join
-        self.client.sendto(b"\x00" + self.player.toBytes(), self.remoteAddr)
+        self.summonPlayer()
 
         self.recvThread = threading.Thread(
             target=self.packetHandler, daemon=True)
@@ -250,6 +268,9 @@ class NetworkController(GenericController):
                         initVelocity=Velocity(0, -6, 0, True, 6)
                     ))
                     self.client.sendto(b"\x03", self.remoteAddr)
+            if keystate[pygame.K_r]: #? Respawn
+                if self.player.isDead == True:
+                    self.summonPlayer()
             if keystate[pygame.K_ESCAPE]:
                 # ? Packet type 4: Quit
                 self.quit()
@@ -316,7 +337,7 @@ class NetworkController(GenericController):
 
                 self.opponents[b[0]].velocity.x = sx
                 self.opponents[b[0]].velocity.y = sy
-            elif b[1] == 3: # ? Handle shoot
+            elif b[1] == 3:  # ? Handle shoot
                 self.game.summon(SpaceObject(
                     pos=self.opponents[b[0]].pos,
                     scr=self.screen,
