@@ -304,7 +304,7 @@ class NetworkController(GenericController):
                 print(b)
                 # * For some reason, even though the buffer used by all the types of packets are the same, defining that buffer outside the if statement breaks the interpretation
                 buff = b[2:]
-                if self.opponents.get(b[0]) == None:
+                if self.opponents.get(b[0]) == None or self.opponents.get(b[0]).isDead == True:
                     self.client.sendto(
                         b"\x00" + self.player.toBytes(), self.remoteAddr)
                     self.opponents[b[0]] = spaceObjectFromBytes(
