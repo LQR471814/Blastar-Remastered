@@ -249,8 +249,8 @@ def constructSyncBytes(pos: Union[Tuple[int, int], List[int]]):
     # ? Velocity Sync Protocol Description:
     # ? Buffer Size: 25 Bytes
     # ? [4 Bytes (int) X] | [4 Bytes (int) Y]
-    return struct.pack("!II", int(pos[0]), int(pos[1]))
+    return struct.pack("!ff", pos[0], pos[1])
 
 
 def interpretSyncBytes(b: bytes) -> Tuple[Tuple[int, int], Velocity]:
-    return struct.unpack("!II", b)
+    return struct.unpack("!ff", b)

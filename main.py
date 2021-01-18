@@ -327,8 +327,8 @@ class NetworkController(GenericController):
             elif b[1] == 2:  # ? Handle Sync
                 buff = b[2:]
                 syncParams = interpretSyncBytes(buff)
-                distX = syncParams[0] - int(self.opponents[b[0]].pos[0])
-                distY = syncParams[1] - int(self.opponents[b[0]].pos[1])
+                distX = syncParams[0] - self.opponents[b[0]].pos[0]
+                distY = syncParams[1] - self.opponents[b[0]].pos[1]
                 a = 0.1  # ? De-acceleration
                 t = 10  # ? Time
 
