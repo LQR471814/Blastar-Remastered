@@ -338,18 +338,19 @@ class NetworkController(GenericController):
                 self.opponents[b[0]].velocity.x = sx
                 self.opponents[b[0]].velocity.y = sy
             elif b[1] == 3:  # ? Handle shoot
-                self.game.summon(SpaceObject(
-                    pos=self.opponents[b[0]].pos,
-                    scr=self.screen,
-                    sprite=pygame.image.load("enemy_bullet.png"),
-                    dead=pygame.Surface((0, 0)),
-                    maxVelSpeed=6,
-                    onWallCollided=self.limitBullet,
-                    onCollision=self.onAllCollided,
-                    givenID="Enemy_Bullet",
-                    velocityFalloff=self.falloff,
-                    initVelocity=Velocity(0, -6, 0, True, 6)
-                ))
+                if self.opponents[b[0]].isDead == False:
+                    self.game.summon(SpaceObject(
+                        pos=self.opponents[b[0]].pos,
+                        scr=self.screen,
+                        sprite=pygame.image.load("enemy_bullet.png"),
+                        dead=pygame.Surface((0, 0)),
+                        maxVelSpeed=6,
+                        onWallCollided=self.limitBullet,
+                        onCollision=self.onAllCollided,
+                        givenID="Enemy_Bullet",
+                        velocityFalloff=self.falloff,
+                        initVelocity=Velocity(0, -6, 0, True, 6)
+                    ))
             elif b[1] == 4:  # ? Handle Quit
                 opp = self.opponents.get(b[0])
                 if opp != None:
