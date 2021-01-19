@@ -373,7 +373,6 @@ if __name__ == "__main__":
         game = SingleplayerController()
         game.run()
     elif mode == 1:
-        # ? DEBUG
         print("Specify Multiplayer Server Address")
         addr = input(" > ")
         print("Specify Multiplayer Server Port")
