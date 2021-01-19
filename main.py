@@ -329,8 +329,8 @@ class NetworkController(GenericController):
                 syncParams = interpretSyncBytes(buff)
                 distX = syncParams[0] - self.opponents[b[0]].pos[0]
                 distY = syncParams[1] - self.opponents[b[0]].pos[1]
-                a = 0.1  # ? De-acceleration
-                t = 10  # ? Time
+                a = self.falloff  # ? De-acceleration
+                t = 5  # ? Time
 
                 sx = (distX + 1/2 * a * t**2)/t  # ? Speed X (Velocity X)
                 sy = (distY + 1/2 * a * t**2)/t  # ? Speed Y (Velocity Y)
@@ -374,10 +374,10 @@ if __name__ == "__main__":
         game.run()
     elif mode == 1:
         # ? DEBUG
-        # print("Specify Multiplayer Server Address")
-        # addr = input(" > ")
-        # print("Specify Multiplayer Server Port")
-        # port = int(input(" > "))
+        print("Specify Multiplayer Server Address")
+        addr = input(" > ")
+        print("Specify Multiplayer Server Port")
+        port = int(input(" > "))
 
         game = NetworkController()
-        game.run("192.168.1.8", 3000)
+        game.run(addr, port)
