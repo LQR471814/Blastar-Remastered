@@ -42,13 +42,28 @@ class GenericController():
         self.maxSpeed = 5
         self.falloff = 0.1
 
+        self.maxLogLen = 10
+
         # ? Init
+        self.logText = []
 
         pygame.init()
 
         self.screen = pygame.display.set_mode(self.scrDimensions)
 
         self.game = Game(self.screen, [], self.deathFrames)
+
+    def log(self, s):
+        if len(self.logText) == self.maxLogLen:
+            self.logText.pop(0)
+        self.logText.append(s)
+
+    def renderLog(self):
+        w, h = self.screen.get_size()
+        for i in range(len(self.logText), 0, -1):
+            img = self.font.render(self.logText[i - 1], True, self.BLACK)
+            # ? Note: 5px is the margin from left and margin from bottom
+            self.screen.blit(img, (5, h - (self.fontsize * (i)) - 5))
 
     def run(self):
         self.player = SpaceObject(
@@ -67,11 +82,11 @@ class GenericController():
         self.game.summon(self.player)
 
         # ? Some text rendering stuff
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
+        self.WHITE = (255, 255, 255)
+        self.BLACK = (0, 0, 0)
 
-        fontsize = 20
-        font = pygame.font.SysFont(None, fontsize)
+        self.fontsize = 20
+        self.font = pygame.font.SysFont(None, self.fontsize)
         w, h = self.screen.get_size()
 
         self.clock = pygame.time.Clock()
@@ -116,14 +131,13 @@ class GenericController():
                 pygame.quit()
                 sys.exit()
 
-            # ? Some text overlays
-            img = font.render(str(self.player.velocity), True, BLACK)
-            self.screen.blit(img, (5, h))
-
-            img = font.render(str(int(self.fps)), True, BLACK)
-            self.screen.blit(img, (5, 0))
-
             self.game.tick()
+
+            # ? Some Text Overlays
+            self.renderLog()
+
+            img = self.font.render(str(int(self.fps)), True, self.BLACK)
+            self.screen.blit(img, (5, 0))
 
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -131,7 +145,7 @@ class GenericController():
                     sys.exit()
 
             pygame.display.update()
-            self.screen.fill(WHITE)
+            self.screen.fill(self.WHITE)
 
     def limitPlayers(self, obj):
         obj.pos[0] = clamp(obj.pos[0], 0, self.scrDimensions[0])
@@ -139,6 +153,12 @@ class GenericController():
 
     def onAllCollided(self, obj, target):
         if obj.id.split("_")[0] not in target.id and target.id.split("_")[0] not in obj.id:
+            if "Enemy" in obj.id or "Enemy" in target.id:
+                if obj.id.split("_")[0] == "Enemy" and obj.isDead != True:
+                    self.log("Killed Player " + obj.id.split("_")[1])
+                elif target.id.split("_")[0] == "Enemy" and target.isDead != True:
+                    self.log("Killed Player " + target.id.split("_")[1])
+
             self.game.kill(obj, target)
 
     def limitBullet(self, obj):
@@ -158,7 +178,7 @@ class SingleplayerController(GenericController):
             maxVelSpeed=self.maxSpeed,
             onWallCollided=self.limitPlayers,
             onCollision=self.onAllCollided,
-            givenID="Enemy",
+            givenID="Enemy_0",
             velocityFalloff=self.falloff
         ))
 
@@ -211,12 +231,11 @@ class NetworkController(GenericController):
             target=self.packetHandler, daemon=True)
         self.recvThread.start()
 
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
+        self.WHITE = (255, 255, 255)
+        self.BLACK = (0, 0, 0)
 
-        fontsize = 20
-        font = pygame.font.SysFont(None, fontsize)
-        w, h = self.screen.get_size()
+        self.fontsize = 20
+        self.font = pygame.font.SysFont(None, self.fontsize)
 
         self.clock = pygame.time.Clock()
 
@@ -268,7 +287,7 @@ class NetworkController(GenericController):
                         initVelocity=Velocity(0, -6, 0, True, 6)
                     ))
                     self.client.sendto(b"\x03", self.remoteAddr)
-            if keystate[pygame.K_r]: #? Respawn
+            if keystate[pygame.K_r]:  # ? Respawn
                 if self.player.isDead == True:
                     self.summonPlayer()
             if keystate[pygame.K_ESCAPE]:
@@ -280,14 +299,14 @@ class NetworkController(GenericController):
                     b"\x02" + constructSyncBytes(self.player.pos), self.remoteAddr)
                 if self.player.velocity.x == 0 and self.player.velocity.y == 0:
                     self.synced = True
-            # ? Some text overlays
-            img = font.render(str(self.player.velocity), True, BLACK)
-            self.screen.blit(img, (5, h))
-
-            img = font.render(str(int(self.fps)), True, BLACK)
-            self.screen.blit(img, (5, 0))
 
             self.game.tick()
+
+            # ? Some Text Overlays
+            self.renderLog()
+
+            img = self.font.render(str(int(self.fps)), True, self.BLACK)
+            self.screen.blit(img, (5, 0))
 
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -295,7 +314,7 @@ class NetworkController(GenericController):
                     self.quit()
 
             pygame.display.update()
-            self.screen.fill(WHITE)
+            self.screen.fill(self.WHITE)
 
     def packetHandler(self):
         while True:
@@ -366,7 +385,7 @@ class NetworkController(GenericController):
 
 
 if __name__ == "__main__":
-    menu = open("menu.txt", "r")
+    menu = open("menu.txt", "r", encoding="utf8")
     print(menu.read())
     mode = int(input(" > "))
     if mode == 0:
