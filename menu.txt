@@ -26,4 +26,3 @@ ______ _           _              ______                         _              
     Select a Mode:
     (0): Single Player
     (1): Multiplayer
-
